@@ -1,0 +1,1128 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Colour Study — Porter's Paints</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@1,600&family=Plus+Jakarta+Sans:wght@400&display=swap" rel="stylesheet">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  html, body {
+    width: 100%; height: 100%;
+    overflow: hidden;
+  }
+
+  #app {
+    width: 100vw; height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    transition: background-color 1.8s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+  }
+
+  #texture-overlay {
+    position: fixed; inset: 0;
+    background-image: url('../Assets/Painttexture.png');
+    background-size: cover;
+    background-position: center;
+    mix-blend-mode: multiply;
+    opacity: 0.9;
+    pointer-events: none;
+    z-index: 2;
+  }
+
+  #colour-info {
+    position: absolute;
+    top: 2.5rem; left: 50%;
+    transform: translateX(-50%);
+    font-family: 'Cormorant Garamond', serif;
+    font-weight: 600;
+    font-style: italic;
+    font-size: 0.75rem;
+    letter-spacing: 0.18em;
+    opacity: 0.5;
+    transition: color 0.8s ease;
+    white-space: nowrap;
+    user-select: none;
+    text-align: center;
+    line-height: 1.6;
+    z-index: 3;
+  }
+
+  #question-container {
+    text-align: center;
+    padding: 2rem;
+    max-width: 580px;
+    width: 100%;
+    position: relative;
+    z-index: 3;
+  }
+
+  #question-text {
+    font-family: 'Cormorant Garamond', serif;
+    font-weight: 600;
+    font-style: italic;
+    font-size: 3.4rem;
+    line-height: 1.2;
+    margin-bottom: 3rem;
+    transition: color 0.8s ease;
+    letter-spacing: 0.01em;
+  }
+
+  #question-text.float-away {
+    animation: questionFloatAway 0.42s ease forwards;
+  }
+
+  #question-text.float-in {
+    animation: questionFloatIn 0.6s ease forwards;
+  }
+
+  @keyframes questionFloatAway {
+    from { opacity: 1; transform: translateY(0); }
+    to   { opacity: 0; transform: translateY(-18px); }
+  }
+
+  @keyframes questionFloatIn {
+    from { opacity: 0; transform: translateY(14px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  #answers {
+    display: flex;
+    gap: 1.2rem;
+    justify-content: center;
+    align-items: center;
+  }
+
+  .answer-btn {
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    font-weight: 400;
+    font-size: 0.78rem;
+    letter-spacing: 0.08em;
+    background: transparent;
+    border: 1px solid currentColor;
+    cursor: pointer;
+    padding: 0.6rem 1.5rem;
+    border-radius: 2rem;
+    transition: opacity 0.25s ease, background 0.2s ease;
+    position: relative;
+    outline: none;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .answer-btn:hover { opacity: 1 !important; background: rgba(128,128,128,0.12); }
+  .answer-btn:active { transform: scale(0.97); }
+
+  .answer-btn.side { opacity: 0.82; }
+  .answer-btn.neutral {
+    opacity: 0.45;
+    font-size: 0.66rem;
+    letter-spacing: 0.06em;
+    border-style: dashed;
+  }
+
+  .btn-key {
+    display: block;
+    font-size: 0.48rem;
+    letter-spacing: 0.06em;
+    opacity: 0.5;
+    margin-top: 0.18rem;
+    font-family: 'Plus Jakarta Sans', sans-serif;
+  }
+
+  @keyframes answerPop {
+    0%   { transform: scale(1); }
+    30%  { transform: scale(1.14); opacity: 1 !important; }
+    65%  { transform: scale(1.05); opacity: 1 !important; }
+    100% { transform: scale(1); }
+  }
+
+  .answer-btn.popped {
+    animation: answerPop 0.55s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+  }
+
+  /* Progress dots */
+  #progress-indicator {
+    position: absolute;
+    bottom: 2.8rem; left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    z-index: 3;
+  }
+
+  .dot {
+    width: 4px; height: 4px;
+    border-radius: 50%;
+    transition: all 0.55s cubic-bezier(0.4, 0, 0.2, 1);
+    opacity: 0.22;
+  }
+
+  .dot.answered {
+    opacity: 0.6;
+    transform: scale(1.35);
+  }
+
+  .dot.current {
+    opacity: 0.95;
+    width: 5px; height: 5px;
+  }
+
+  /* Keyboard hint */
+  #keyboard-hint {
+    position: absolute;
+    bottom: 5.2rem; left: 50%;
+    transform: translateX(-50%);
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    font-weight: 400;
+    font-size: 0.55rem;
+    letter-spacing: 0.2em;
+    opacity: 0.32;
+    transition: color 0.8s ease;
+    white-space: nowrap;
+    pointer-events: none;
+    z-index: 3;
+  }
+
+  /* Save flash */
+  #save-flash {
+    position: absolute;
+    bottom: 4.8rem; left: 50%;
+    transform: translateX(-50%);
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    font-weight: 400;
+    font-size: 0.55rem;
+    letter-spacing: 0.25em;
+    text-transform: uppercase;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.4s ease, color 0.8s ease;
+    z-index: 3;
+  }
+
+  /* Export button */
+  #export-btn {
+    position: absolute;
+    bottom: 2.5rem; right: 2.5rem;
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    font-weight: 400;
+    font-size: 0.58rem;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    opacity: 0.25;
+    transition: opacity 0.3s ease, color 0.8s ease;
+    outline: none;
+    padding: 0.3rem 0;
+    z-index: 3;
+  }
+
+  #export-btn:hover { opacity: 0.7; }
+
+  /* ── Results button ─────────────────────────────────────────────────────── */
+  #results-btn {
+    position: absolute;
+    bottom: 2.5rem; right: 2.5rem;
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    font-weight: 400;
+    font-size: 0.65rem;
+    letter-spacing: 0.28em;
+    text-transform: uppercase;
+    background: transparent;
+    border: 1px solid currentColor;
+    cursor: pointer;
+    opacity: 0.7;
+    transition: opacity 0.3s ease, color 0.8s ease;
+    outline: none;
+    padding: 0.45rem 1rem;
+    border-radius: 1px;
+    z-index: 3;
+  }
+  #results-btn:hover { opacity: 1; }
+
+  /* ── Results overlay ────────────────────────────────────────────────────── */
+  #results-overlay {
+    position: fixed; inset: 0;
+    background: rgba(8, 8, 8, 0.97);
+    z-index: 200;
+    display: none;
+    flex-direction: column;
+    color: rgba(255,255,255,0.85);
+  }
+  #results-overlay.open { display: flex; }
+
+  #results-header {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    padding: 2rem 2.5rem 1.2rem;
+    border-bottom: 1px solid rgba(255,255,255,0.08);
+    flex-shrink: 0;
+  }
+
+  #results-title {
+    font-family: 'Cormorant Garamond', serif;
+    font-weight: 600;
+    font-style: italic;
+    font-size: 2rem;
+    letter-spacing: 0.02em;
+  }
+
+  #results-meta {
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    font-size: 0.6rem;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    opacity: 0.35;
+  }
+
+  #results-close {
+    background: none;
+    border: none;
+    color: rgba(255,255,255,0.5);
+    font-size: 1rem;
+    cursor: pointer;
+    padding: 0.2rem 0.4rem;
+    line-height: 1;
+    transition: color 0.2s ease;
+  }
+  #results-close:hover { color: rgba(255,255,255,0.95); }
+
+  #results-filters {
+    padding: 0.85rem 2.5rem;
+    display: flex;
+    flex-wrap: nowrap;
+    gap: 0.4rem 0.5rem;
+    border-bottom: 1px solid rgba(255,255,255,0.08);
+    flex-shrink: 0;
+    align-items: center;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+  #results-filters::-webkit-scrollbar { display: none; }
+
+  .filter-sep {
+    width: 1px;
+    height: 14px;
+    background: rgba(255,255,255,0.15);
+    margin: 0 0.15rem;
+    align-self: center;
+  }
+
+  .filter-btn {
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    font-weight: 400;
+    font-size: 0.58rem;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    background: transparent;
+    border: 1px solid rgba(255,255,255,0.18);
+    color: rgba(255,255,255,0.5);
+    cursor: pointer;
+    padding: 0.3rem 0.85rem;
+    border-radius: 2rem;
+    transition: all 0.2s ease;
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+  .filter-btn:hover {
+    border-color: rgba(255,255,255,0.5);
+    color: rgba(255,255,255,0.85);
+  }
+  .filter-btn.active {
+    background: rgba(255,255,255,0.92);
+    border-color: rgba(255,255,255,0.92);
+    color: rgba(0,0,0,0.8);
+  }
+
+  #results-grid-wrap {
+    flex: 1;
+    overflow-y: auto;
+    padding: 1.5rem 2.5rem 3rem;
+  }
+
+  #results-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+    gap: 12px;
+  }
+
+  .swatch-card {
+    border-radius: 2px;
+    overflow: hidden;
+    background: rgba(255,255,255,0.04);
+    transition: transform 0.18s ease, opacity 0.25s ease;
+    cursor: default;
+  }
+  .swatch-card:hover { transform: translateY(-2px); }
+  .swatch-card.hidden { display: none; }
+
+  .swatch-colour {
+    height: 80px;
+    width: 100%;
+  }
+
+  .swatch-info {
+    padding: 0.5rem 0.6rem 0.55rem;
+  }
+
+  .swatch-name {
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    font-weight: 400;
+    font-size: 0.6rem;
+    letter-spacing: 0.06em;
+    color: rgba(255,255,255,0.7);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    margin-bottom: 0.3rem;
+  }
+
+  .swatch-tags {
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    font-size: 0.52rem;
+    letter-spacing: 0.04em;
+    color: rgba(255,255,255,0.35);
+    line-height: 1.5;
+    min-height: 0.8rem;
+  }
+
+  .swatch-tag-hi {
+    color: rgba(255,255,255,0.8);
+  }
+
+  .swatch-votes {
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    font-size: 0.5rem;
+    letter-spacing: 0.08em;
+    color: rgba(255,255,255,0.2);
+    margin-top: 0.3rem;
+  }
+
+  #results-empty {
+    display: none;
+    text-align: center;
+    padding: 5rem 2rem;
+    font-family: 'Cormorant Garamond', serif;
+    font-style: italic;
+    font-size: 1.4rem;
+    color: rgba(255,255,255,0.25);
+  }
+
+  /* ── Swatch detail modal ────────────────────────────────────────────────── */
+  #swatch-detail {
+    position: fixed; inset: 0;
+    z-index: 400;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0,0,0,0.6);
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+    padding: 2rem;
+  }
+  #swatch-detail.open { display: flex; }
+
+  #swatch-detail-modal {
+    width: min(460px, 100%);
+    border-radius: 6px;
+    overflow: hidden;
+    box-shadow: 0 24px 80px rgba(0,0,0,0.5);
+    position: relative;
+  }
+
+  #swatch-detail-colour {
+    height: 240px;
+    position: relative;
+  }
+
+  #swatch-detail-texture {
+    position: absolute; inset: 0;
+    background-image: url('../Assets/Painttexture.png');
+    background-size: cover;
+    background-position: center;
+    mix-blend-mode: multiply;
+    opacity: 0.9;
+    pointer-events: none;
+  }
+
+  #swatch-detail-body {
+    background: #0e0e0e;
+    padding: 1.8rem 2rem 2rem;
+    position: relative;
+  }
+
+  #swatch-detail-close {
+    position: absolute;
+    top: 1rem; right: 1.2rem;
+    background: none;
+    border: none;
+    color: rgba(255,255,255,0.35);
+    font-size: 0.95rem;
+    cursor: pointer;
+    line-height: 1;
+    padding: 0.2rem;
+    transition: color 0.2s;
+  }
+  #swatch-detail-close:hover { color: rgba(255,255,255,0.9); }
+
+  #swatch-detail-name {
+    font-family: 'Cormorant Garamond', serif;
+    font-weight: 600;
+    font-style: italic;
+    font-size: 2rem;
+    color: rgba(255,255,255,0.92);
+    line-height: 1.1;
+    margin-bottom: 0.25rem;
+  }
+
+  #swatch-detail-sub {
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    font-size: 0.58rem;
+    letter-spacing: 0.18em;
+    color: rgba(255,255,255,0.3);
+    margin-bottom: 1.4rem;
+  }
+
+  #swatch-detail-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+    margin-bottom: 1.4rem;
+  }
+
+  .detail-tag {
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    font-size: 0.54rem;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    border: 1px solid rgba(255,255,255,0.22);
+    color: rgba(255,255,255,0.65);
+    padding: 0.22rem 0.7rem;
+    border-radius: 2rem;
+  }
+
+  #swatch-detail-desc {
+    font-family: 'Cormorant Garamond', serif;
+    font-style: italic;
+    font-size: 1.05rem;
+    line-height: 1.6;
+    color: rgba(255,255,255,0.6);
+  }
+</style>
+</head>
+<body>
+<div id="app">
+  <div id="colour-info"></div>
+
+    <div id="question-container">
+      <div id="question-text">—</div>
+      <div id="answers">
+        <button class="answer-btn side" id="btn-left" onclick="answer('left')">
+          <span class="btn-label"></span>
+          <span class="btn-key">← A</span>
+        </button>
+        <button class="answer-btn neutral" id="btn-neutral" onclick="answer('neutral')">
+          <span class="btn-label">Neutral</span>
+          <span class="btn-key">↑ ↓ Space</span>
+        </button>
+        <button class="answer-btn side" id="btn-right" onclick="answer('right')">
+          <span class="btn-label"></span>
+          <span class="btn-key">D →</span>
+        </button>
+      </div>
+    </div>
+
+    <div id="progress-indicator"></div>
+    <div id="keyboard-hint"></div>
+    <div id="save-flash">saved</div>
+    <button id="results-btn" onclick="openResults()">Results</button>
+  <div id="texture-overlay"></div>
+</div>
+
+<!-- ── Results overlay ──────────────────────────────────────────────────────── -->
+<div id="results-overlay">
+  <div id="results-header">
+    <div id="results-title">Results</div>
+    <div id="results-meta"></div>
+    <button id="results-close" onclick="closeResults()">✕</button>
+  </div>
+  <div id="results-filters">
+    <button class="filter-btn active" data-answer="all" onclick="applyFilter('all')">All</button>
+    <div class="filter-sep"></div>
+    <button class="filter-btn" data-answer="Warm"          onclick="applyFilter('Warm')">Warm</button>
+    <button class="filter-btn" data-answer="Cool"          onclick="applyFilter('Cool')">Cool</button>
+    <div class="filter-sep"></div>
+    <button class="filter-btn" data-answer="Energetic"     onclick="applyFilter('Energetic')">Energetic</button>
+    <button class="filter-btn" data-answer="Calm"          onclick="applyFilter('Calm')">Calm</button>
+    <div class="filter-sep"></div>
+    <button class="filter-btn" data-answer="Light"         onclick="applyFilter('Light')">Light</button>
+    <button class="filter-btn" data-answer="Dark"          onclick="applyFilter('Dark')">Dark</button>
+    <div class="filter-sep"></div>
+    <button class="filter-btn" data-answer="Soft"          onclick="applyFilter('Soft')">Soft</button>
+    <button class="filter-btn" data-answer="Harsh"         onclick="applyFilter('Harsh')">Harsh</button>
+    <div class="filter-sep"></div>
+    <button class="filter-btn" data-answer="Intimate"      onclick="applyFilter('Intimate')">Intimate</button>
+    <button class="filter-btn" data-answer="Distant"       onclick="applyFilter('Distant')">Distant</button>
+    <div class="filter-sep"></div>
+    <button class="filter-btn" data-answer="Optimistic"    onclick="applyFilter('Optimistic')">Optimistic</button>
+    <button class="filter-btn" data-answer="Contemplative" onclick="applyFilter('Contemplative')">Contemplative</button>
+    <div class="filter-sep"></div>
+    <button class="filter-btn" data-answer="Familiar"      onclick="applyFilter('Familiar')">Familiar</button>
+    <button class="filter-btn" data-answer="Foreign"       onclick="applyFilter('Foreign')">Foreign</button>
+    <div class="filter-sep"></div>
+    <button class="filter-btn" data-answer="Playful"       onclick="applyFilter('Playful')">Playful</button>
+    <button class="filter-btn" data-answer="Serious"       onclick="applyFilter('Serious')">Serious</button>
+    <div class="filter-sep"></div>
+    <button class="filter-btn" data-answer="Luxurious"     onclick="applyFilter('Luxurious')">Luxurious</button>
+    <button class="filter-btn" data-answer="Humble"        onclick="applyFilter('Humble')">Humble</button>
+    <div class="filter-sep"></div>
+    <button class="filter-btn" data-answer="Neutral"       onclick="applyFilter('Neutral')">Neutral</button>
+  </div>
+  <div id="results-grid-wrap">
+    <div id="results-grid"></div>
+    <div id="results-empty">No colours match this filter yet.</div>
+  </div>
+</div>
+
+<!-- ── Swatch detail modal ───────────────────────────────────────────────────── -->
+<div id="swatch-detail">
+  <div id="swatch-detail-modal">
+    <div id="swatch-detail-colour">
+      <div id="swatch-detail-texture"></div>
+    </div>
+    <div id="swatch-detail-body">
+      <button id="swatch-detail-close" onclick="closeSwatchDetail()">✕</button>
+      <div id="swatch-detail-name"></div>
+      <div id="swatch-detail-sub"></div>
+      <div id="swatch-detail-tags"></div>
+      <p id="swatch-detail-desc"></p>
+    </div>
+  </div>
+</div>
+
+<script>
+// ─── Questions ───────────────────────────────────────────────────────────────
+
+const QUESTIONS = [
+  { text: "Warm or Cool?",               left: "Warm",        right: "Cool" },
+  { text: "Energetic or Calm?",          left: "Energetic",   right: "Calm" },
+  { text: "Light or Dark?",              left: "Light",       right: "Dark" },
+  { text: "Soft or Harsh?",              left: "Soft",        right: "Harsh" },
+  { text: "Intimate or Distant?",        left: "Intimate",    right: "Distant" },
+  { text: "Optimistic or Contemplative?",left: "Optimistic",  right: "Contemplative" },
+  { text: "Familiar or Foreign?",        left: "Familiar",    right: "Foreign" },
+  { text: "Playful or Serious?",         left: "Playful",     right: "Serious" },
+  { text: "Luxurious or Humble?",        left: "Luxurious",   right: "Humble" }
+];
+
+// ─── Colour Data (405 Porter's Paints) ───────────────────────────────────────
+
+const COLOURS = [
+  {name:"Deep Teal",r:10,g:104,b:96},{name:"Napoleon",r:152,g:174,b:172},{name:"Arctic Bay",r:101,g:122,b:120},{name:"Double Hailstorm",r:100,g:120,b:118},{name:"Laguna",r:77,g:132,b:126},{name:"Studio Grey",r:111,g:138,b:135},{name:"Splash",r:145,g:220,b:211},{name:"Fifth Avenue",r:129,g:199,b:190},{name:"Gosling Grey",r:207,g:222,b:220},{name:"Nettle",r:143,g:164,b:161},{name:"Tea Of China",r:59,g:76,b:73},{name:"Sea Glass",r:129,g:157,b:152},{name:"Moorehen",r:133,g:144,b:142},{name:"Estuary",r:156,g:183,b:178},{name:"Duck Egg",r:152,g:168,b:165},{name:"Double Newport Blue",r:155,g:165,b:163},{name:"Deep Water Green",r:99,g:146,b:135},{name:"Waterfall",r:149,g:182,b:174},{name:"Sea Foam",r:102,g:162,b:146},{name:"Summertime",r:147,g:205,b:189},{name:"Cuban Turquoise",r:49,g:165,b:133},{name:"Beach House",r:146,g:171,b:163},{name:"Evergreen",r:34,g:98,b:77},{name:"Talc",r:225,g:228,b:227},{name:"Winter Sea",r:102,g:114,b:110},{name:"Equinox",r:81,g:84,b:83},{name:"Serene",r:186,g:209,b:201},{name:"Agave",r:149,g:177,b:166},{name:"Emerald",r:40,g:67,b:56},{name:"Tidal Pool",r:219,g:226,b:223},{name:"Frosting",r:196,g:212,b:204},{name:"White Rhino",r:101,g:103,b:102},{name:"Dew",r:173,g:188,b:180},{name:"Verdant",r:56,g:84,b:69},{name:"Liberty Green",r:159,g:178,b:167},{name:"Lake George",r:165,g:187,b:174},{name:"Mizuna",r:155,g:177,b:164},{name:"Half Chintz Grey",r:212,g:221,b:215},{name:"Blue Spruce",r:128,g:135,b:130},{name:"Beach Grass",r:115,g:130,b:119},{name:"Bayview Green",r:120,g:143,b:126},{name:"Welsh Slate",r:84,g:88,b:85},{name:"Chintz Grey",r:199,g:208,b:201},{name:"Frozen",r:163,g:173,b:165},{name:"Wildwood",r:72,g:84,b:74},{name:"Glass House",r:172,g:186,b:173},{name:"Water Lily",r:221,g:224,b:221},{name:"Grey Gum",r:184,g:196,b:184},{name:"Grey Fox",r:191,g:193,b:191},{name:"Eau de Nil",r:148,g:169,b:148},{name:"Shell Grey",r:145,g:147,b:145},{name:"Ramshead",r:92,g:93,b:92},{name:"Oakmoss",r:93,g:103,b:92},{name:"Tern Grey",r:172,g:180,b:171},{name:"Ashen",r:237,g:242,b:236},{name:"Water Nymph",r:158,g:181,b:153},{name:"Highlands",r:91,g:95,b:90},{name:"Glossodia",r:173,g:190,b:167},{name:"Castle Green",r:129,g:150,b:121},{name:"Mojito",r:196,g:209,b:190},{name:"K2",r:231,g:233,b:230},{name:"Winter Green",r:135,g:152,b:124},{name:"Salt Wattle",r:187,g:191,b:184},{name:"Bayleaf",r:104,g:117,b:94},{name:"Waterford",r:199,g:206,b:193},{name:"Paradise Green",r:81,g:91,b:69},{name:"Maidenhair",r:81,g:95,b:63},{name:"Alpen",r:238,g:240,b:235},{name:"Half Dusty Mule",r:183,g:185,b:180},{name:"Double Dusty Mule",r:149,g:151,b:146},{name:"Gum Leaf",r:127,g:133,b:118},{name:"Grey Suede",r:134,g:136,b:131},{name:"Nori",r:72,g:74,b:69},{name:"Green Velvet",r:80,g:89,b:65},{name:"Sage",r:158,g:163,b:146},{name:"Olive Branch",r:130,g:136,b:110},{name:"Prairie",r:192,g:196,b:176},{name:"Dried Herb",r:108,g:110,b:89},{name:"Stone Fruit",r:204,g:200,b:185},{name:"Artichoke",r:115,g:119,b:95},{name:"Dusty Mule",r:165,g:166,b:156},{name:"Aloe Vera",r:171,g:178,b:154},{name:"Pear",r:207,g:212,b:188},{name:"Lime Sorbet",r:210,g:218,b:179},{name:"Pistachio",r:182,g:193,b:154},{name:"Fern",r:119,g:132,b:92},{name:"Leaf",r:140,g:158,b:103},{name:"Bamboo",r:167,g:182,b:133},{name:"Asparagus",r:147,g:164,b:115},{name:"Willow",r:176,g:191,b:148},{name:"Celery",r:193,g:208,b:166},{name:"Lime",r:152,g:171,b:96},{name:"Moss",r:105,g:119,b:62},{name:"Chartreuse",r:168,g:186,b:75},{name:"Avocado",r:93,g:105,b:47},{name:"Pesto",r:107,g:118,b:63},{name:"Basil",r:83,g:94,b:42},{name:"Hunter",r:56,g:73,b:26},{name:"Khaki",r:176,g:170,b:134},{name:"Sandstone",r:196,g:185,b:152},{name:"Hessian",r:165,g:155,b:120},{name:"Oat",r:212,g:206,b:183},{name:"Straw",r:220,g:212,b:180},{name:"Wheat",r:208,g:196,b:158},{name:"Hay",r:198,g:183,b:141},{name:"Barley",r:184,g:168,b:126},{name:"Ochre",r:176,g:145,b:75},{name:"Mustard",r:184,g:152,b:65},{name:"Turmeric",r:175,g:136,b:44},{name:"Saffron",r:189,g:152,b:57},{name:"Honey",r:196,g:160,b:78},{name:"Amber",r:186,g:138,b:42},{name:"Gold",r:196,g:152,b:48},{name:"Sand",r:209,g:194,b:163},{name:"Dune",r:195,g:177,b:143},{name:"Desert",r:182,g:161,b:123},{name:"Caramel",r:174,g:140,b:96},{name:"Toffee",r:158,g:118,b:70},{name:"Biscuit",r:196,g:168,b:130},{name:"Walnut",r:130,g:95,b:55},{name:"Chestnut",r:116,g:78,b:42},{name:"Chocolate",r:98,g:63,b:31},{name:"Espresso",r:80,g:48,b:20},{name:"Mocha",r:107,g:72,b:38},{name:"Hazelnut",r:152,g:115,b:74},{name:"Latte",r:186,g:158,b:124},{name:"Cappuccino",r:162,g:130,b:92},{name:"Barista",r:138,g:104,b:68},{name:"Cinnamon",r:152,g:100,b:52},{name:"Ginger",r:178,g:118,b:60},{name:"Copper",r:163,g:100,b:45},{name:"Rust",r:152,g:82,b:35},{name:"Terracotta",r:172,g:95,b:52},{name:"Brick",r:158,g:78,b:38},{name:"Clay",r:168,g:108,b:72},{name:"Adobe",r:180,g:120,b:80},{name:"Sienna",r:148,g:88,b:52},{name:"Burnt Orange",r:172,g:88,b:36},{name:"Tangerine",r:194,g:105,b:48},{name:"Apricot",r:210,g:147,b:98},{name:"Peach",r:220,g:168,b:132},{name:"Salmon",r:212,g:148,b:118},{name:"Coral",r:198,g:110,b:85},{name:"Blush",r:218,g:170,b:148},{name:"Rose",r:195,g:134,b:118},{name:"Dusty Rose",r:185,g:148,b:135},{name:"Antique Pink",r:198,g:165,b:152},{name:"Ballet Slipper",r:212,g:182,b:172},{name:"Cameo",r:205,g:175,b:162},{name:"Petal",r:220,g:192,b:182},{name:"Shell Pink",r:218,g:196,b:188},{name:"Powder Pink",r:220,g:200,b:194},{name:"Blossom",r:215,g:178,b:170},{name:"Flamingo",r:205,g:152,b:140},{name:"Watermelon",r:188,g:110,b:100},{name:"Raspberry",r:162,g:72,b:72},{name:"Strawberry",r:172,g:68,b:62},{name:"Cherry",r:148,g:52,b:48},{name:"Crimson",r:142,g:38,b:38},{name:"Ruby",r:152,g:28,b:35},{name:"Scarlet",r:162,g:32,b:28},{name:"Vermillion",r:172,g:42,b:28},{name:"Poppy",r:182,g:52,b:35},{name:"Tomato",r:186,g:72,b:52},{name:"Chilli",r:158,g:45,b:28},{name:"Cinnabar",r:168,g:60,b:42},{name:"Burnt Sienna",r:152,g:75,b:50},{name:"Pomegranate",r:142,g:42,b:40},{name:"Garnet",r:128,g:32,b:38},{name:"Claret",r:112,g:28,b:38},{name:"Burgundy",r:98,g:22,b:35},{name:"Oxblood",r:88,g:18,b:28},{name:"Maroon",r:92,g:22,b:30},{name:"Deep Red",r:108,g:28,b:32},{name:"Cranberry",r:132,g:35,b:45},{name:"Mulberry",r:118,g:38,b:55},{name:"Plum",r:102,g:38,b:58},{name:"Damson",r:92,g:35,b:52},{name:"Aubergine",r:78,g:30,b:48},{name:"Grape",r:108,g:48,b:72},{name:"Mauve",r:152,g:112,b:128},{name:"Lavender",r:172,g:148,b:168},{name:"Lilac",r:182,g:160,b:178},{name:"Wisteria",r:162,g:138,b:162},{name:"Violet",r:108,g:75,b:118},{name:"Purple",r:88,g:52,b:105},{name:"Amethyst",r:118,g:88,b:128},{name:"Heliotrope",r:138,g:102,b:148},{name:"Orchid",r:158,g:118,b:162},{name:"Thistle",r:175,g:148,b:172},{name:"Periwinkle",r:148,g:152,b:188},{name:"Cornflower",r:128,g:138,b:185},{name:"Hyacinth",r:112,g:118,b:175},{name:"Iris",r:98,g:102,b:162},{name:"Delft",r:72,g:78,b:148},{name:"Indigo",r:55,g:58,b:128},{name:"Cobalt",r:42,g:52,b:142},{name:"Navy",r:28,g:35,b:108},{name:"Midnight",r:22,g:25,b:88},{name:"Wedgwood",r:98,g:118,b:158},{name:"Denim",r:88,g:108,b:148},{name:"Chambray",r:108,g:128,b:162},{name:"Slate Blue",r:118,g:135,b:165},{name:"Dusty Blue",r:135,g:150,b:172},{name:"Steel Blue",r:88,g:115,b:148},{name:"Sky",r:152,g:178,b:205},{name:"Pale Blue",r:185,g:202,b:218},{name:"Ice Blue",r:200,g:215,b:228},{name:"Powder Blue",r:185,g:205,b:222},{name:"Aegean",r:55,g:95,b:148},{name:"Prussian",r:32,g:62,b:108},{name:"Cerulean",r:45,g:102,b:162},{name:"Azure",r:62,g:122,b:178},{name:"Capri",r:58,g:112,b:168},{name:"Adriatic",r:42,g:85,b:135},{name:"Corsair",r:35,g:72,b:118},{name:"Caspian",r:38,g:88,b:132},{name:"Petrol",r:28,g:72,b:102},{name:"Teal Blue",r:35,g:95,b:115},{name:"Ocean",r:22,g:82,b:108},{name:"Mineral Blue",r:45,g:108,b:135},{name:"Peacock",r:28,g:98,b:118},{name:"Caribbean",r:38,g:122,b:145},{name:"Turquoise",r:45,g:148,b:158},{name:"Aqua",r:58,g:168,b:172},{name:"Tiffany",r:72,g:178,b:178},{name:"Jade",r:42,g:128,b:108},{name:"Malachite",r:35,g:118,b:92},{name:"Viridian",r:42,g:108,b:82},{name:"Linen",r:218,g:212,b:198},{name:"Cream",r:228,g:222,b:205},{name:"Ivory",r:232,g:228,b:212},{name:"Ecru",r:220,g:212,b:192},{name:"Parchment",r:210,g:200,b:178},{name:"Vellum",r:215,g:208,b:188},{name:"Cashmere",r:200,g:190,b:170},{name:"Vanilla",r:228,g:222,b:200},{name:"Buttermilk",r:225,g:218,b:190},{name:"Butter",r:228,g:220,b:185},{name:"Champagne",r:222,g:212,b:185},{name:"Bone",r:215,g:208,b:192},{name:"Flax",r:205,g:195,b:165},{name:"Putty",r:188,g:178,b:152},{name:"Buff",r:198,g:185,b:155},{name:"Greige",r:188,g:180,b:162},{name:"Taupe",r:178,g:168,b:148},{name:"Stone",r:168,g:158,b:138},{name:"Mushroom",r:158,g:148,b:128},{name:"Warm Grey",r:168,g:162,b:152},{name:"Silver",r:188,g:188,b:188},{name:"Platinum",r:205,g:205,b:205},{name:"Pearl",r:218,g:218,b:215},{name:"Dove",r:195,g:195,b:195},{name:"Pigeon",r:175,g:175,b:175},{name:"Pewter",r:148,g:148,b:148},{name:"Ash",r:138,g:138,b:135},{name:"Smoke",r:125,g:125,b:122},{name:"Flint",r:112,g:112,b:108},{name:"Graphite",r:92,g:92,b:88},{name:"Charcoal",r:72,g:72,b:68},{name:"Anthracite",r:58,g:58,b:55},{name:"Ebony",r:42,g:40,b:38},{name:"Soot",r:35,g:33,b:31},{name:"Jet",r:22,g:20,b:18},{name:"Obsidian",r:18,g:16,b:14},{name:"Liquorice",r:28,g:25,b:22},{name:"Pitch",r:15,g:13,b:11},{name:"Lamp Black",r:25,g:23,b:20},{name:"Carbon",r:32,g:30,b:28},{name:"Smoke Grey",r:108,g:108,b:105},{name:"Elephant",r:118,g:115,b:112},{name:"Seal",r:98,g:95,b:92},{name:"Fossil",r:142,g:138,b:132},{name:"Gravel",r:128,g:125,b:120},{name:"Pebble",r:155,g:152,b:145},{name:"Shale",r:138,g:132,b:125},{name:"Slate",r:108,g:105,b:98},{name:"Driftwood",r:155,g:148,b:135},{name:"Pumice",r:165,g:162,b:152},{name:"Limestone",r:175,g:170,b:158},{name:"Travertine",r:182,g:176,b:162},{name:"Portland",r:188,g:184,b:172},{name:"Concrete",r:172,g:168,b:158},{name:"Plaster",r:192,g:188,b:178},{name:"Chalk",r:205,g:202,b:195},{name:"Oyster",r:212,g:208,b:198},{name:"Alabaster",r:220,g:218,b:210},{name:"Snowdrop",r:228,g:228,b:225},{name:"Glacier",r:232,g:234,b:232},{name:"Frost",r:235,g:236,b:234},{name:"White",r:242,g:242,b:240},{name:"Pure White",r:248,g:248,b:246},{name:"Antique White",r:225,g:220,b:208},{name:"Old Lace",r:218,g:212,b:198},{name:"Magnolia",r:228,g:224,b:212},{name:"Lily White",r:232,g:230,b:220},{name:"Parchment White",r:222,g:218,b:205},{name:"Warm White",r:235,g:232,b:222},{name:"Cool White",r:238,g:240,b:240},{name:"Blue White",r:232,g:235,b:238},{name:"Porcelain",r:228,g:228,b:225},{name:"Bisque",r:225,g:215,b:200},{name:"Muslin",r:215,g:210,b:195},{name:"Cotton",r:230,g:228,b:220},{name:"Calico",r:208,g:200,b:182},{name:"Toile",r:195,g:188,b:168}
+];
+
+// ─── State ────────────────────────────────────────────────────────────────────
+
+let sessionId = localStorage.getItem('porters_session');
+if (!sessionId) {
+  sessionId = 'sess_' + Math.random().toString(36).substr(2,9) + '_' + Date.now();
+  localStorage.setItem('porters_session', sessionId);
+}
+
+let colourCounts = {};
+try { colourCounts = JSON.parse(localStorage.getItem('porters_counts') || '{}'); } catch(e){}
+
+let totalResponses = 0;
+try {
+  const saved = JSON.parse(localStorage.getItem('porters_responses') || '[]');
+  totalResponses = saved.length;
+} catch(e){}
+
+let currentColour = null;
+let currentQuestion = 0;
+let busy = false;
+
+// ─── Utility ─────────────────────────────────────────────────────────────────
+
+function luminance(r, g, b) {
+  const l = c => { c /= 255; return c <= 0.03928 ? c/12.92 : Math.pow((c+0.055)/1.055, 2.4); };
+  return 0.2126*l(r) + 0.7152*l(g) + 0.0722*l(b);
+}
+
+function textColor(r, g, b) {
+  return luminance(r, g, b) > 0.32
+    ? 'rgba(0,0,0,0.7)'
+    : 'rgba(255,255,255,0.8)';
+}
+
+function calculateLRV(r, g, b) {
+  const toLinear = c => {
+    c /= 255;
+    return c <= 0.04045 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4);
+  };
+  return Math.round((0.2126 * toLinear(r) + 0.7152 * toLinear(g) + 0.0722 * toLinear(b)) * 100);
+}
+
+function getNextColour() {
+  let minCount = Infinity;
+  COLOURS.forEach(c => {
+    const n = colourCounts[c.name] || 0;
+    if (n < minCount) minCount = n;
+  });
+  const pool = COLOURS.filter(c => (colourCounts[c.name]||0) === minCount);
+  const others = currentColour ? pool.filter(c => c.name !== currentColour.name) : pool;
+  const choices = others.length > 0 ? others : pool;
+  return choices[Math.floor(Math.random() * choices.length)];
+}
+
+// ─── Save response ────────────────────────────────────────────────────────────
+
+async function saveResponse(colour, question, selected) {
+  const entry = {
+    colour:    colour.name,
+    r: colour.r, g: colour.g, b: colour.b,
+    question:  question.text,
+    answer:    selected,
+    timestamp: new Date().toISOString(),
+    sessionId: sessionId
+  };
+
+  try {
+    const all = JSON.parse(localStorage.getItem('porters_responses') || '[]');
+    all.push(entry);
+    localStorage.setItem('porters_responses', JSON.stringify(all));
+    totalResponses = all.length;
+  } catch(e) { console.warn('localStorage full:', e); }
+
+  colourCounts[colour.name] = (colourCounts[colour.name]||0) + 1;
+  localStorage.setItem('porters_counts', JSON.stringify(colourCounts));
+
+  try {
+    await fetch('/api/response', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(entry)
+    });
+  } catch(e) {}
+
+  flashSaved();
+}
+
+function flashSaved() {
+  const el = document.getElementById('save-flash');
+  el.style.opacity = '0.45';
+  setTimeout(() => { el.style.opacity = '0'; }, 1100);
+}
+
+// ─── Render ───────────────────────────────────────────────────────────────────
+
+function render() {
+  const {r, g, b} = currentColour;
+  const tc = textColor(r, g, b);
+  const lrv = calculateLRV(r, g, b);
+
+  document.getElementById('app').style.backgroundColor = `rgb(${r},${g},${b})`;
+
+  ['colour-info','question-text','keyboard-hint','save-flash','results-btn'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.style.color = tc;
+  });
+
+  document.getElementById('colour-info').innerHTML =
+    `rgb(${r}, ${g}, ${b})<br>LRV ${lrv}`;
+
+  const q = QUESTIONS[currentQuestion];
+  document.getElementById('question-text').textContent = q.text;
+  document.getElementById('btn-left').querySelector('.btn-label').textContent  = q.left;
+  document.getElementById('btn-right').querySelector('.btn-label').textContent = q.right;
+  ['btn-left','btn-neutral','btn-right'].forEach(id => {
+    document.getElementById(id).style.color = tc;
+  });
+
+  const dots = document.getElementById('progress-indicator');
+  dots.innerHTML = '';
+  for (let i = 0; i < 9; i++) {
+    const d = document.createElement('div');
+    d.className = 'dot' + (i < currentQuestion ? ' answered' : i === currentQuestion ? ' current' : '');
+    d.style.background = tc;
+    dots.appendChild(d);
+  }
+}
+
+// ─── Answer ───────────────────────────────────────────────────────────────────
+
+async function answer(side) {
+  if (busy) return;
+  busy = true;
+
+  const q = QUESTIONS[currentQuestion];
+  const selected = side === 'left' ? q.left : side === 'right' ? q.right : 'Neutral';
+
+  saveResponse(currentColour, q, selected);
+
+  const btnMap = { left: 'btn-left', right: 'btn-right', neutral: 'btn-neutral' };
+  const selectedBtn = document.getElementById(btnMap[side]);
+  selectedBtn.classList.add('popped');
+
+  const questionText = document.getElementById('question-text');
+  questionText.classList.add('float-away');
+
+  await delay(440);
+
+  selectedBtn.classList.remove('popped');
+  questionText.classList.remove('float-away');
+
+  currentQuestion++;
+  if (currentQuestion >= QUESTIONS.length) {
+    currentQuestion = 0;
+    currentColour = getNextColour();
+  }
+
+  render();
+  questionText.classList.add('float-in');
+
+  await delay(650);
+  questionText.classList.remove('float-in');
+  busy = false;
+}
+
+function delay(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+// ─── Results overlay ─────────────────────────────────────────────────────────
+
+const ANSWER_TO_QUESTION = {};
+for (const q of QUESTIONS) {
+  ANSWER_TO_QUESTION[q.left]  = q.text;
+  ANSWER_TO_QUESTION[q.right] = q.text;
+}
+
+// ── Colour-science heuristics ─────────────────────────────────────────────────
+
+function rgbToHsl(r, g, b) {
+  r /= 255; g /= 255; b /= 255;
+  const max = Math.max(r, g, b), min = Math.min(r, g, b);
+  const l = (max + min) / 2;
+  if (max === min) return { h: 0, s: 0, l };
+  const d = max - min;
+  const s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+  let h;
+  switch (max) {
+    case r: h = ((g - b) / d + (g < b ? 6 : 0)) / 6; break;
+    case g: h = ((b - r) / d + 2) / 6; break;
+    case b: h = ((r - g) / d + 4) / 6; break;
+  }
+  return { h: h * 360, s, l };
+}
+
+function guessAnswers(r, g, b) {
+  const { h, s, l } = rgbToHsl(r, g, b);
+  const lrv = calculateLRV(r, g, b);
+
+  const isWarm = s < 0.08
+    ? r >= b
+    : (h < 75 || h >= 300) ? true
+    : h < 155 ? s < 0.18
+    : false;
+
+  const veryLight = l > 0.78;
+  const light     = l > 0.55;
+  const dark      = l < 0.38;
+  const veryDark  = l < 0.22;
+  const highSat   = s > 0.45;
+  const lowSat    = s < 0.18;
+
+  const tag = (winner) => ({ winner, answers: { [winner]: 10 } });
+
+  return [
+    {
+      question: "Warm or Cool?",
+      ...tag(isWarm ? "Warm" : "Cool")
+    },
+    {
+      question: "Energetic or Calm?",
+      ...tag(highSat && !veryLight && !dark ? "Energetic" : "Calm")
+    },
+    {
+      question: "Light or Dark?",
+      ...tag(lrv > 30 ? "Light" : "Dark")
+    },
+    {
+      question: "Soft or Harsh?",
+      ...tag(lowSat || veryLight || s < 0.32 ? "Soft" : "Harsh")
+    },
+    {
+      question: "Intimate or Distant?",
+      ...tag(dark || (isWarm && !veryLight) ? "Intimate" : "Distant")
+    },
+    {
+      question: "Optimistic or Contemplative?",
+      ...tag(isWarm && light && s > 0.1 ? "Optimistic" : "Contemplative")
+    },
+    {
+      question: "Familiar or Foreign?",
+      ...tag(s > 0.6 && !veryLight && !veryDark ? "Foreign" : "Familiar")
+    },
+    {
+      question: "Playful or Serious?",
+      ...tag(isWarm && light && s > 0.28 ? "Playful" : "Serious")
+    },
+    {
+      question: "Luxurious or Humble?",
+      ...tag(
+        veryLight ? "Humble"
+        : dark && s > 0.1 ? "Luxurious"
+        : s > 0.3 && !light ? "Luxurious"
+        : "Humble"
+      )
+    },
+  ];
+}
+
+// ── State ─────────────────────────────────────────────────────────────────────
+
+let activeFilters  = new Set(); // empty = All
+let resultsColours = [];
+
+function openResults() {
+  document.getElementById('results-overlay').classList.add('open');
+  activeFilters.clear();
+  syncFilterButtons();
+  // Seed grid with guessed answers immediately — no waiting on server
+  resultsColours = COLOURS.map(c => ({
+    ...c, totalVotes: 0, questions: guessAnswers(c.r, c.g, c.b), estimated: true
+  }));
+  renderGrid();
+  fetchResults();
+}
+
+function closeResults() {
+  document.getElementById('results-overlay').classList.remove('open');
+}
+
+async function fetchResults() {
+  try {
+    const res  = await fetch('/api/results');
+    const data = await res.json();
+
+    const voted = {};
+    for (const c of (data.colours || [])) voted[c.name] = c;
+
+    resultsColours = COLOURS.map(c => {
+      const real = voted[c.name];
+      // If colour has real votes, use them; otherwise fall back to guesses
+      return {
+        ...c,
+        totalVotes: real?.totalVotes || 0,
+        questions:  real?.questions?.length ? real.questions : guessAnswers(c.r, c.g, c.b),
+        estimated:  !real?.questions?.length,
+      };
+    });
+
+    const totalVotes = resultsColours.reduce((s, c) => s + c.totalVotes, 0);
+    const votedCount = resultsColours.filter(c => c.totalVotes > 0).length;
+    document.getElementById('results-meta').textContent =
+      `${totalVotes.toLocaleString()} votes · ${votedCount} of 405 colours`;
+
+    renderGrid();
+  } catch(e) {
+    document.getElementById('results-meta').textContent = 'Estimated results (server offline)';
+  }
+}
+
+function colourMatchesFilters(c) {
+  if (activeFilters.size === 0) return true;
+  for (const answer of activeFilters) {
+    if (answer === 'Neutral') {
+      if (!c.questions.some(q => q.winner === 'Neutral')) return false;
+    } else {
+      const qText = ANSWER_TO_QUESTION[answer];
+      const q = c.questions.find(q => q.question === qText);
+      if (!q || q.winner !== answer) return false;
+    }
+  }
+  return true;
+}
+
+function renderGrid() {
+  const grid  = document.getElementById('results-grid');
+  const empty = document.getElementById('results-empty');
+  grid.innerHTML = '';
+  let shown = 0;
+
+  for (const c of resultsColours) {
+    if (!colourMatchesFilters(c)) continue;
+    shown++;
+
+    const card   = document.createElement('div');
+    card.className = 'swatch-card';
+    card.style.cursor = 'pointer';
+    card.addEventListener('click', () => openSwatchDetail(c));
+
+    const colour = document.createElement('div');
+    colour.className = 'swatch-colour';
+    colour.style.background = `rgb(${c.r},${c.g},${c.b})`;
+
+    const info = document.createElement('div');
+    info.className = 'swatch-info';
+
+    const name = document.createElement('div');
+    name.className = 'swatch-name';
+    name.textContent = c.name;
+
+    const tags = document.createElement('div');
+    tags.className = 'swatch-tags';
+    tags.innerHTML = c.questions.map(q => {
+      const hi = activeFilters.has(q.winner);
+      return `<span class="${hi ? 'swatch-tag-hi' : ''}">${q.winner}</span>`;
+    }).join('<span style="opacity:0.25"> · </span>');
+
+    const votes = document.createElement('div');
+    votes.className = 'swatch-votes';
+    votes.textContent = c.totalVotes > 0
+      ? `${c.totalVotes} vote${c.totalVotes !== 1 ? 's' : ''}`
+      : 'estimated';
+
+    info.appendChild(name);
+    info.appendChild(tags);
+    info.appendChild(votes);
+    card.appendChild(colour);
+    card.appendChild(info);
+    grid.appendChild(card);
+  }
+
+  empty.style.display = shown === 0 ? 'block' : 'none';
+}
+
+// ─── Swatch detail ────────────────────────────────────────────────────────────
+
+function generateDescription(questions) {
+  const t = {};
+  for (const q of questions) t[q.question] = q.winner;
+
+  const warm     = t["Warm or Cool?"]                === "Warm";
+  const light    = t["Light or Dark?"]               === "Light";
+  const calm     = t["Energetic or Calm?"]           === "Calm";
+  const intimate = t["Intimate or Distant?"]         === "Intimate";
+  const optimist = t["Optimistic or Contemplative?"] === "Optimistic";
+  const soft     = t["Soft or Harsh?"]               === "Soft";
+  const familiar = t["Familiar or Foreign?"]         === "Familiar";
+  const playful  = t["Playful or Serious?"]          === "Playful";
+  const luxe     = t["Luxurious or Humble?"]         === "Luxurious";
+
+  const opens = {
+    "WLC": "A colour that rests easily in a room — warm and unhurried, like light filtered through thin curtains.",
+    "WLE": "A colour full of warmth and life, bright enough to animate a space without claiming too much of it.",
+    "WDC": "A slow, deeply warm colour — the kind that turns a room amber at the edges and holds it there.",
+    "WDE": "A rich, warm colour with real presence: full of depth, and unapologetic about it.",
+    "CLC": "A colour of particular quietness — cool and clear, it brings a kind of mountain-morning stillness to a room.",
+    "CLE": "A cool, focused colour with a clean edge, sharpening everything it shares a space with.",
+    "CDC": "A colour that draws a room inward — cool, deep, and profoundly still.",
+    "CDE": "A cool, dark colour with authority — purposeful, and unlikely to recede.",
+  };
+  const key = `${warm?"W":"C"}${light?"L":"D"}${calm?"C":"E"}`;
+  const sentence1 = opens[key] || "A colour of considered character.";
+
+  const mids = {
+    "IO": "It draws people together — close, encouraging, and generous with warmth.",
+    "IC": "It turns a room inward, creating the kind of quiet that makes space for thought.",
+    "DO": "It lifts a space outward — open, generous, and easy to be inside.",
+    "DC": "It creates space without filling it, lending a thoughtful remove to the room.",
+  };
+  const sentence2 = mids[`${intimate?"I":"D"}${optimist?"O":"C"}`] || "";
+
+  const traits = [];
+  if (!soft)    traits.push("direct in its effect");
+  if (luxe)     traits.push("quietly luxurious");
+  if (!familiar) traits.push("carrying something unexpected");
+  if (playful)  traits.push("willing to be light");
+
+  let sentence3 = "";
+  if (traits.length > 0) {
+    const joined = traits.length === 1
+      ? traits[0]
+      : traits.slice(0, -1).join(", ") + " and " + traits[traits.length - 1];
+    sentence3 = joined.charAt(0).toUpperCase() + joined.slice(1) + ".";
+  }
+
+  return [sentence1, sentence2, sentence3].filter(Boolean).join(" ");
+}
+
+function openSwatchDetail(c) {
+  const lrv = calculateLRV(c.r, c.g, c.b);
+  document.getElementById('swatch-detail-colour').style.background = `rgb(${c.r},${c.g},${c.b})`;
+  document.getElementById('swatch-detail-name').textContent = c.name;
+  document.getElementById('swatch-detail-sub').textContent =
+    `rgb(${c.r}, ${c.g}, ${c.b})  ·  LRV ${lrv}${c.estimated ? '  ·  estimated' : ''}`;
+  document.getElementById('swatch-detail-tags').innerHTML =
+    c.questions.map(q =>
+      `<span class="detail-tag">${q.winner}</span>`
+    ).join('');
+  document.getElementById('swatch-detail-desc').textContent = generateDescription(c.questions);
+  document.getElementById('swatch-detail').classList.add('open');
+}
+
+function closeSwatchDetail() {
+  document.getElementById('swatch-detail').classList.remove('open');
+}
+
+document.getElementById('swatch-detail').addEventListener('click', e => {
+  if (e.target === document.getElementById('swatch-detail')) closeSwatchDetail();
+});
+
+function applyFilter(answer) {
+  if (answer === 'all') {
+    activeFilters.clear();
+  } else {
+    activeFilters.has(answer) ? activeFilters.delete(answer) : activeFilters.add(answer);
+  }
+  syncFilterButtons();
+  renderGrid();
+}
+
+function syncFilterButtons() {
+  document.querySelectorAll('.filter-btn').forEach(btn => {
+    const a = btn.dataset.answer;
+    btn.classList.toggle('active',
+      a === 'all' ? activeFilters.size === 0 : activeFilters.has(a)
+    );
+  });
+}
+
+// Close on Escape (innermost layer first)
+document.addEventListener('keydown', e => {
+  if (e.key !== 'Escape') return;
+  if (document.getElementById('swatch-detail').classList.contains('open')) {
+    closeSwatchDetail();
+  } else if (document.getElementById('results-overlay').classList.contains('open')) {
+    closeResults();
+  }
+});
+
+// ─── Keyboard ────────────────────────────────────────────────────────────────
+
+document.addEventListener('keydown', e => {
+  if (document.getElementById('results-overlay').classList.contains('open')) return;
+  if (e.key === 'ArrowLeft'  || e.key === 'a') answer('left');
+  if (e.key === 'ArrowRight' || e.key === 'd') answer('right');
+  if (e.key === ' ' || e.key === 'ArrowUp' || e.key === 'ArrowDown') {
+    e.preventDefault();
+    answer('neutral');
+  }
+});
+
+// ─── Init ─────────────────────────────────────────────────────────────────────
+
+currentColour = getNextColour();
+render();
+</script>
+</body>
+</html>

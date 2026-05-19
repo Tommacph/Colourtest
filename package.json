@@ -1,0 +1,12 @@
+{
+  "name": "colour-study",
+  "version": "1.0.0",
+  "description": "Porter's Paints colour perception study",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
